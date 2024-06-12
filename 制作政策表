@@ -112,6 +112,7 @@ merged_df = deduplicate_and_merge(expanded_df2, cols_to_check, cols_to_merge)
 merged_df['目标行业'] = merged_df['目标行业'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
 merged_df['已有产品'] = merged_df['已有产品'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
 
+merged_df.to_excel('D:/实习/测试结果/工作流/政策表1.xlsx')
 
 df=merged_df
 # 执行处理
