@@ -1,0 +1,151 @@
+import os
+import time
+import json
+import random
+from http import HTTPStatus
+import dashscope
+from dashscope import Generation
+from dashscope.api_entities.dashscope_response import Role
+from http import HTTPStatus
+import dashscope
+import time
+%matplotlib inline
+import pandas as pd
+from bs4 import BeautifulSoup
+import webbrowser
+import requests
+import warnings
+import re
+import pandas as pd
+import matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+import jieba as jb
+import re
+from collections import Counter
+from wordcloud import WordCloud
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from pylab import mpl
+# Author: benjaminYang
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+import time
+import json
+# 设置显示中文字体
+mpl.rcParams["font.sans-serif"] = ["SimHei"]
+warnings.filterwarnings('ignore')  # 忽略所有警告
+
+excel_file = "D:/实习/测试结果/524政策洞察/副本关键词项目 - 副本.xlsx"
+df_input = pd.read_excel(excel_file)
+df = df_input
+
+df['项目名称'] = df['项目名称'].astype(str)
+symbol_map = str.maketrans({
+    ',': '，',  # 逗号
+    '.': '。',  # 句号
+    ';': '；',  # 分号
+    ':': '：',  # 冒号
+    '"': '“',  # 双引号
+    "'": '‘',  # 单引号
+    '(': '（',  # 左圆括号
+    ')': '）',  # 右圆括号
+    ' ': '',
+})
+
+# 定义函数来处理指定列中的符号替换
+def replace_chinese_symbols(df, column):
+    df[column] = df[column].apply(lambda x: x.translate(symbol_map))
+    return df
+
+# 执行处理
+processed_df = replace_chinese_symbols(df, '项目名称')
+
+
+keywords = [
+    "招标公告", "终止公告", "的终止公告", "需求公示", "交易证明书", "合同公告",
+    "中标（成交）结果公告", "采购公告", "公开招标公告", "合同履约验收公告",
+    "咨询服务磋商公告", "监理磋商公告", "采购公告", "变更公告", "成交结果公示",
+    "结果公告", "招标公告", "合同公示", "成交公告", "竞争性磋商公告", "磋商公告",
+    "中选公告", "成交结果公告", "中标公告", "询价公告", "中标结果公示",
+    "中标候选人公示", "询价采购公告", "结果公示", "招标失败公告", "合同公告",
+    "竞价成交公告", "采购结果公示", "需求公示", "中标公示", "谈判成交公告",
+    "竞争性谈判公告", "竞价公告", "比选公告", "预审公告", "验收公告", "废标公告",
+    "成交公告", "成交结果公告"
+]
+
+# 定义删除函数
+def remove_keywords(title):
+    # 检查并删除匹配关键字
+    for kw in keywords:
+        if title.endswith(kw):
+            return title[:-len(kw)]
+    # 检查并删除结尾'公告'
+    if title.endswith('公告'):
+        return title[:-2]
+    title = re.sub(r'[。，、？！；：的]$', '', title)
+    return title
+
+# 应用删除函数
+df['项目名称'] = df['项目名称'].apply(remove_keywords)
+
+# 打印结果 DataFrame
+print("删除特定结尾字符串后的 DataFrame:")
+print(df)
+df['项目状态'] = df['项目状态'].fillna('原本没有')
+
+df['项目预算'] = df['项目预算'].fillna(0)
+df['成交金额'] = df['成交金额'].fillna(0)
+
+delete_keywords = ["废标", "流标", "违规", "删除"]
+first_group_keywords = ["验收", "合同", "中标", "成交", "结果变更"]
+second_group_keywords = ["招标", "邀标", "询价", "竞谈", "单一", "竞价", "变更"]
+third_group_keywords = ["预告", "预审", "预审结果", "论证意见", "需求公示"]
+
+# 定义处理逻辑的函数
+def filter_group(group_df):
+    # 打印组的初始状态
+    print("\n处理组:")
+    print(group_df)
+    
+    # 删除包含delete_keywords的行
+    filtered_df = group_df[~group_df['项目状态'].isin(delete_keywords)]
+    print("删除关键词后的 DataFrame:")
+    print(filtered_df)
+    
+    # 按优先级筛选行
+    for keywords in [first_group_keywords, second_group_keywords, third_group_keywords]:
+        filtered_group = filtered_df[filtered_df['项目状态'].str.contains('|'.join(keywords))]
+        if not filtered_group.empty:
+#             print("关键词 {} 过滤后的 DataFrame:".format(keywords))
+#             print(filtered_group)
+            
+            # 检查列 'amount1' 和 'amount2' 的最大值所在的行
+            max_amount1_row = filtered_group.loc[filtered_group['成交金额'].idxmax()]
+            max_amount2_row = filtered_group.loc[filtered_group['项目预算'].idxmax()]
+            
+            if max_amount1_row['标题'] != max_amount2_row['标题']:
+                # 如果这两个最大值在不同的行，将它们合并到一行
+                combined_row = max_amount1_row.copy()
+                combined_row['成交金额'] = max_amount2_row['项目预算']
+                
+                # 打印合并后的行
+                print("合并后的行:")
+                print(combined_row)
+                
+                # 将合并后的行转换为数据框并返回
+                return pd.DataFrame([combined_row])
+            else:
+                return pd.DataFrame([max_amount1_row])
+    
+    # 如果没有匹配到任何保留的行，则保留原始行
+    return filtered_df
+
+# 按id列分组并应用过滤逻辑，并合并结果
+result = df.groupby('项目名称', group_keys=False).apply(filter_group).reset_index(drop=True)
+
+result.to_excel('D:/实习/测试结果/524政策洞察/招标信息处理/招标处理（按项目名称）.xlsx')
