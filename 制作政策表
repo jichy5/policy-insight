@@ -56,6 +56,24 @@ result['省市级政策具体政策'] = result['省市级政策具体政策'].st
 result['国家级政策具体政策'] = result['国家级政策具体政策'].astype(str)
 result['省市级政策具体政策'] = result['省市级政策具体政策'].astype(str)
 
+def replace_and_remove_duplicates(df, column):
+    def process_string(s):
+        # 将顿号替换为逗号
+        s = s.replace('、', ',')
+        # 拆分字符串并删除重复项
+        parts = s.split(',')
+        unique_parts = []
+        for part in parts:
+            if part not in unique_parts:
+                unique_parts.append(part)
+        # 使用逗号连接独特的部分
+        return ','.join(unique_parts)
+    
+    # 应用处理函数到指定列
+    df[column] = df[column].apply(process_string)
+    return df
+
+
 def expand_keywords(df, column_to_split):
     rows = []
     for idx, row in df.iterrows():
@@ -94,5 +112,10 @@ merged_df = deduplicate_and_merge(expanded_df2, cols_to_check, cols_to_merge)
 merged_df['目标行业'] = merged_df['目标行业'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
 merged_df['已有产品'] = merged_df['已有产品'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
 
-merged_df.to_excel('D:/实习/测试结果/工作流/政策表1.xlsx')
 
+df=merged_df
+# 执行处理
+df = replace_and_remove_duplicates(df, '目标行业')
+df = replace_and_remove_duplicates(df, '已有产品')
+df = replace_and_remove_duplicates(df, '省市')
+df.to_excel('D:/实习/测试结果/工作流/政策表整理.xlsx')
