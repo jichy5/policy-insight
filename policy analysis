@@ -1,0 +1,204 @@
+import os
+import time
+import json
+import random
+from http import HTTPStatus
+import dashscope
+from dashscope import Generation
+from dashscope.api_entities.dashscope_response import Role
+from http import HTTPStatus
+import dashscope
+import time
+%matplotlib inline
+import pandas as pd
+from bs4 import BeautifulSoup
+import webbrowser
+import requests
+import warnings
+import re
+import pandas as pd
+import matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+import jieba as jb
+import re
+from collections import Counter
+from wordcloud import WordCloud
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from pylab import mpl
+# Author: benjaminYang
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+import time
+import json
+# 设置显示中文字体
+mpl.rcParams["font.sans-serif"] = ["SimHei"]
+warnings.filterwarnings('ignore')  # 忽略所有警告
+
+## api请自己输入
+dashscope.api_key = ''
+
+input_system='''
+# 角色
+你是一位熟练的政策解析者和文章挖掘者。你的专长是从各类文章中精准抽取并分析出有关国家和地方省市级别的机器人政策。
+
+## 任务:
+多层次的政策评估
+- 评估一: 鉴定文章中是否包含了和机器人相关的国家级政策
+- 评估二: 鉴定文章中是否叙述了与机器人相关的省市级政策
+任务特点: 当文章中出现《》书名号的名称，要对其进行评估，看是否为具体的政策，并在评估结果中予以提及。对政策可以适当的做解释
+
+若文章提及了国家级机器人政策，但对应省市级政策未提及，则输出：
+国家级政策: 涉及
+省市级政策: 未涉及
+省市: 无
+引述国家级政策为: <文章中的国家级政策>
+
+若文章涵盖了省市级机器人政策，但未涉及国家级政策，输出：
+国家级政策: 未涉及
+省市级政策: 涉及
+省市: <相关的省市>
+引述省市级政策为: <文章中的省市级政策>
+
+如果文章没有提及任何级别的机器人政策，输出：
+国家级政策: 未涉及
+省市级政策: 未涉及
+省市: 无
+引述政策为: 无
+'''
+
+def extract_back(s, char):
+    # 查找字符char在字符串s中的索引
+    index = s.find(char)
+    
+    # 如果字符存在，提取后半部分
+    if index != -1:
+        return s[index + len(char):]
+    else:
+        # 如果字符不存在，输出整个字符串
+        return s
+    
+def extract_before(s, substr):
+    # 查找子字符串substr在字符串s中的索引
+    index = s.find(substr)
+    
+    # 如果子字符串存在，提取前半部分
+    if index != -1:
+        return s[:index]
+    else:
+        # 如果子字符串不存在，输出整个字符串
+        return s
+
+#文件路径
+excel_file = "D:/实习/测试结果/5.24机器人洞察测试.xlsx"
+df = pd.read_excel(excel_file)
+
+
+
+# df_result = pd.DataFrame(columns=['上传时间','链接', '标题','公众号','内容','总结','标签','摘要','政策','潜在的目标市场','已有商业模型','已有产品','关键词','国家级政策','省市级政策','省市','具体政策'])
+df_result = pd.DataFrame(columns=['上传时间','链接', '标题','公众号','内容','总结1','总结2','国家级政策','省市级政策','省市','具体政策'])
+
+# 读取Excel文件
+start_time = time.time()
+
+df_result = pd.DataFrame(columns=['上传时间','链接', '标题','公众号','内容','总结'])
+result_last=""
+for index,(puttime,html_content,title,numb,result,concl) in enumerate(zip(df['上传时间'], df['链接'],df['标题'], df['公众号'],df['内容'],df['总结'])):  
+    flag1= 0
+    # 执行一些操作，直到至少过去了10秒
+    
+    # 使用Beautiful Soup解析HTML内容
+    
+    try:
+        
+        content = result
+#             content = result
+#             input_text =  ' 给' + content + '选择' + classify_title + '里面规定的主题，如果有对应的主题则输出主题名称（注意只能输出一个主题名称），如果没有对应的主题，则输出无对应主题（这里得从这个政策完全看粗这个标题才输出对应主题） '
+
+        messages = [{'role': 'system', 'content': input_system},
+        {'role': 'user', 'content': '这是一篇微信公众号文章: \n ' + content}]
+        while(flag1 == 0):
+            response = Generation.call(
+                'qwen1.5-32b-chat',
+                messages=messages,
+                temperature = 0.5,
+                # set the random seed, optional, default to 1234 if not set
+                seed=random.randint(1, 10000),
+                result_format='message',  # set the result to be "message"  format.
+#                     enable_search = True,
+
+            )
+            if response.status_code == HTTPStatus.OK:
+                conclude = response.output.choices[0]['message']['content']
+                messages.append({'role': response.output.choices[0]['message']['role'],
+                                 'content': response.output.choices[0]['message']['content']})
+                flag1 = 1 
+            else:
+                print('Request id: %s, Status code: %s, error code: %s, error message: %s' % (
+                    response.request_id, response.status_code,
+                    response.code, response.message
+                ))
+                if response.status_code == 400:
+                    raise ValueError("这是一个故意的错误")
+                else:
+                    time.sleep(30)
+
+                        
+            count_po = extract_back(conclude,'国家级政策:')
+            count_po = extract_before(count_po,'省市级政策:')
+            pro_po = extract_back(conclude,'省市级政策:')
+            pro_po = extract_before(pro_po,'省市:')
+            province = extract_back(conclude,'省市:')
+            province = extract_before(province,'引述')
+            describe = extract_back(conclude,'引述')
+            
+            print(count_po)
+            print(pro_po)
+            print(f'当前行: {index + 1}')
+            print(f'总结:{conclude}')
+
+            
+            df_result = df_result.append({'上传时间': puttime,'链接': html_content,'标题': title,
+                                          '公众号': numb,'内容': result,'总结1': concl,'总结2':conclude,'国家级政策':count_po,
+                                          '省市级政策':pro_po,'省市':province,'具体政策':describe
+                                          }, ignore_index=True)
+            
+            
+            print('\n')
+    
+
+        
+    except Exception as e:
+        print(e)
+        conclude = '文本错误'
+        df_result = df_result.append({'上传时间': puttime,'链接': html_content,
+                                      '标题': title,'公众号': numb,'内容':content,
+                                      '总结1': '提取错误,可能有敏感词','总结2':'提取错误,可能有敏感词','国家级政策':'提取错误,可能有敏感词',
+                                        '省市级政策':'提取错误,可能有敏感词','省市':'提取错误,可能有敏感词',
+                                      '具体政策':'提取错误,可能有敏感词'
+                                        },
+                                     ignore_index=True)
+
+
+    
+    
+
+
+
+    print('\n')
+#     print(f'内容:{result}')
+    if (index + 1) % 100 == 0:
+        df_result.to_excel('D:/实习/测试结果/5.24机器人分级政策结果2.xlsx')
+        print(f'当前行: {index + 1}')
+
+df_result['读取长度'] = df_result['内容'].str.len()
+end_time = time.time()
+execution_time = end_time - start_time
+print("代码执行时间:", execution_time, "秒")
+
+df_result.to_excel('D:/实习/测试结果/5.24机器人分级政策结果2.xlsx')
