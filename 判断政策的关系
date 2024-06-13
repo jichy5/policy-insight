@@ -1,0 +1,60 @@
+##首先用excel将‘提取AI输出的政策并分列’的表分为三份，一份是只有国家政策的，一份是只有省市政策的，一份是都有的
+
+import pandas as pd
+import re
+
+excel_path = 'D:/实习/测试结果/524政策洞察/5.24只有国家.xlsx'
+df = pd.read_excel(excel_path)
+
+
+excel_path = 'D:/实习/测试结果/524政策洞察/5.24只有省市.xlsx'
+df1 = pd.read_excel(excel_path)
+df1
+
+excel_path = 'D:/实习/测试结果/524政策洞察/5.24都有.xlsx'
+df2 = pd.read_excel(excel_path)
+df2
+
+import pandas as pd
+import re
+
+
+
+# 创建两个示例dataframe
+
+# 提取《》内的文字函数
+def extract_all_text_within_brackets(text):
+    return re.findall('《(.*?)》', text)
+
+# 判断df1中提取的每个文字是否被df2中的任意文字包含
+def check_containment_modified(extracted_list, comparison_series):
+    results_contained = []
+    for text in extracted_list:
+        # 对df2的每个元素进行检查，查看df1中的文字是否为其子字符串
+        contained = any(text in comp_text for comp_text in comparison_series)
+        if contained:
+            results_contained.append(text)
+    return results_contained
+
+# 判断df1中提取的每个文字是否不被df2中的任意文字包含
+def check_non_containment_modified(extracted_list, comparison_series):
+    results_not_contained = []
+    for text in extracted_list:
+        # 对df2的每个元素进行检查
+        not_contained = all(text not in comp_text for comp_text in comparison_series)
+        if not_contained:
+            results_not_contained.append(text)
+    return results_not_contained
+
+# 应用提取函数到df1
+df1['extracted'] = df1['省市级政策具体政策'].apply(extract_all_text_within_brackets)
+
+# 应用包含检查函数到df1来确定包含在df2中的文字
+df1['不独立'] = df1['extracted'].apply(check_containment_modified, comparison_series=df2['省市级政策具体政策'])
+
+# 应用非包含检查函数到df1来确定不在df2中的文字
+df1['独立'] = df1['extracted'].apply(check_non_containment_modified, comparison_series=df2['省市级政策具体政策'])
+
+print(df1)
+
+df1.to_excel('D:/实习/测试结果/524政策洞察/独立与否省市.xlsx') #输出的独立与不独立的列是关于省市政策是否独立的
