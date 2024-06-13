@@ -1,3 +1,30 @@
+##如果想统计政策出现的频数，这里利用的表格是判断政策的关系后的国家级表和省市级表的结合
+excel_path = 'D:/实习/测试结果/524政策洞察/5.24 独立与否.xlsx'
+df = pd.read_excel(excel_path)
+
+# 定义一个函数来从字符串中提取单引号内的所有内容
+def extract_text_within_single_quotes(text):
+    return re.findall("'(.*?)'", text)
+
+# 应用该函数，创建一个新的列来存储提取出来的文本
+df['extracted'] = df['国家级政策具体政策'].apply(extract_text_within_single_quotes)
+print(df['extracted'])
+df['extracted_combined'] = df['extracted'].apply(lambda x: ' '.join(x))  # 合并提取出来的文字为一个字符串
+print(df['extracted_combined'])
+
+# 将所有提取的文字连接成一个列表
+all_extracted_texts = [item for sublist in df['extracted'] for item in sublist]
+
+# 创建一个新DataFrame来统计每个文字的出现次数
+occurrences = pd.Series(all_extracted_texts).value_counts().reset_index()
+occurrences.columns = ['extracted_text', 'count']
+
+# 打印结果
+print(occurrences)
+
+
+
+##该政策表为 policy analysis2 中生成的表
 excel_path = 'D:/实习/测试结果/工作流/政策表1.xlsx'
 df_left = pd.read_excel(excel_path)
 
