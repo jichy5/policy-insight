@@ -1,0 +1,59 @@
+excel_path = 'D:/实习/测试结果/深度洞察.xlsx'
+df_left = pd.read_excel(excel_path)
+df_left
+
+def extract_back(s, char):
+    # 查找字符char在字符串s中的索引
+    index = s.find(char)
+    
+    # 如果字符存在，提取后半部分
+    if index != -1:
+        return s[index + len(char):]
+    else:
+        # 如果字符不存在，输出整个字符串
+        return s
+    
+def extract_before(s, substr):
+    # 查找子字符串substr在字符串s中的索引
+    index = s.find(substr)
+    
+    # 如果子字符串存在，提取前半部分
+    if index != -1:
+        return s[:index]
+    else:
+        # 如果子字符串不存在，输出整个字符串
+        return s
+        
+def extract_business(text):
+    business = extract_back(text,'目标行业：')
+    business = extract_before(business,'潜在市场：')
+    return business
+
+# 应用该函数，将提取的内容放到新的一列
+df_left['目标行业'] = df_left['总结'].apply(extract_business)
+
+def extract_market(text):
+    market = extract_back(text,'潜在市场：')
+    market = extract_before(market,'现有商业模式：')
+    return market
+
+# 应用该函数，将提取的内容放到新的一列
+df_left['潜在市场'] = df_left['总结'].apply(extract_market)
+
+def extract_model(text):
+    model = extract_back(text,'现有商业模式：')
+    model = extract_before(model,'现有产品：')
+    return model
+
+# 应用该函数，将提取的内容放到新的一列
+df_left['现有商业模式'] = df_left['总结'].apply(extract_model)
+
+def extract_product(text):
+    product = extract_back(text,'现有产品：')
+    product = extract_before(product,'\n')
+    return product
+
+# 应用该函数，将提取的内容放到新的一列
+df_left['已有产品'] = df_left['总结'].apply(extract_product)
+
+df_left.to_excel('D:/实习/测试结果/深度洞察.xlsx')
