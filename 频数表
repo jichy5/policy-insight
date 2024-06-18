@@ -24,12 +24,12 @@ print(occurrences)
 
 
 
-##该政策表为 policy analysis2 中生成的表
+##该政策表为 制作政策表 中生成的表
+### 这个是已经提取了一个频数，然后想看这个市场对应的所有产品
+import pandas as pd
+
 excel_path = 'D:/实习/测试结果/工作流/政策表1.xlsx'
 df_left = pd.read_excel(excel_path)
-
-
-## 可以提取某一列的频数 将'已有产品'替换即可
 df = df_left
 
 def replace_characters(parts):
@@ -58,7 +58,7 @@ def extract_all_texts(text):
     return result
 
 # 提取所有以逗号分隔的文字
-df['extracted_texts'] = df['已有产品'].apply(extract_all_texts)
+df['extracted_texts'] = df['目标行业'].apply(extract_all_texts)
 
 # 将所有提取的文本展开到一个Series
 all_texts_series = df['extracted_texts'].explode()
@@ -76,19 +76,14 @@ result_df = pd.DataFrame({
 print(result_df)
 
 
-### 这个是已经提取了一个频数，然后想看这个市场对应的所有产品
-import pandas as pd
-
 # 创建第一个示例 DataFrame
 df1 = df_left
 
-# 创建第二个示例 DataFrame
-excel_path = 'D:/实习/测试结果/524政策洞察/市场.xlsx'
-df2 = pd.read_excel(excel_path)
+df2 = result_df
 
 # 定义一个函数来检查 df2 中的元素是否被包含在 df1 中的某列元素中，并返回包含的另一列元素的合集
 def get_matching_elements(row, df1):
-    matches = df1[df1['潜在市场'].str.contains(row, na=False, regex=False)]
+    matches = df1[df1['目标行业'].str.contains(row, na=False, regex=False)]
     return '\n'.join(matches['已有产品'].tolist())
 
 # 创建新 DataFrame
