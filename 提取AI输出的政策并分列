@@ -1,35 +1,38 @@
 import pandas as pd
 import re
 
-excel_path = 'D:/实习/测试结果/5.24政策测试整理.xlsx'
+excel_path = 'D:/实习/测试结果/分级政策结果.xlsx'
 df = pd.read_excel(excel_path)
+
 
 def extract_back(s, char):
     # 查找字符char在字符串s中的索引
     index = s.find(char)
-    
+
     # 如果字符存在，提取后半部分
     if index != -1:
         return s[index + len(char):]
     else:
         # 如果字符不存在，输出整个字符串
         return s
-    
+
+
 def extract_before(s, substr):
     # 查找子字符串substr在字符串s中的索引
     index = s.find(substr)
-    
+
     # 如果子字符串存在，提取前半部分
     if index != -1:
         return s[:index]
     else:
         # 如果子字符串不存在，输出整个字符串
         return s
-    
+
+
 def extract_back_pro(s, char):
     # 查找字符char在字符串s中的索引
     index = s.find(char)
-    
+
     # 如果字符存在，提取后半部分
     if index != -1:
         return s[index + len(char):]
@@ -38,25 +41,29 @@ def extract_back_pro(s, char):
         t = '无'
         return t
 
+
 def extract_title_country(text):
-    count_po = extract_back(text,'国家级政策为: ')
-    count_po = extract_before(count_po,'省市级政策为: ')
+    count_po = extract_back(text, '国家级政策为: ')
+    count_po = extract_before(count_po, '省市级政策为: ')
     return count_po
 
+
 def extract_title_province(text):
-    pro_po = extract_back_pro(text,'省市级政策为: ')
-    pro_po = extract_before(pro_po,'\n')
+    pro_po = extract_back_pro(text, '省市级政策为: ')
+    pro_po = extract_before(pro_po, '\n')
     return pro_po
+
 
 def extract_titles(text):
     pattern = r'(?<!简称)(?<!下称)(?<!简称“)《(.*?)》'
-    titles_with_brackets  = re.findall(pattern, text)
+    titles_with_brackets = re.findall(pattern, text)
     titles = ['《' + title + '》' for title in titles_with_brackets]
     return titles
+
 
 df['国家级政策'] = df['具体政策'].apply(lambda x: extract_title_country(x))
 df['省市级政策'] = df['具体政策'].apply(lambda x: extract_title_province(x))
 df['国家级政策具体政策'] = df['国家级政策'].apply(lambda x: extract_titles(x))
 df['省市级政策具体政策'] = df['省市级政策'].apply(lambda x: extract_titles(x))
 
-df.to_excel('D:/实习/测试结果/5.24测试.xlsx')
+df.to_excel('D:/实习/测试结果/分级政策结果.xlsx')
