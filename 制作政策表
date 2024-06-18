@@ -1,60 +1,26 @@
-##合并政策表
-import os
-import time
-import json
-import random
-from http import HTTPStatus
-import dashscope
-from dashscope import Generation
-from dashscope.api_entities.dashscope_response import Role
-from http import HTTPStatus
-import dashscope
-import time
-%matplotlib inline
-import pandas as pd
-from bs4 import BeautifulSoup
-import webbrowser
-import requests
 import warnings
-import re
 import pandas as pd
-import matplotlib
-import numpy as np
-import matplotlib.pyplot as plt
-import jieba as jb
-import re
-from collections import Counter
-from wordcloud import WordCloud
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.naive_bayes import MultinomialNB
 from pylab import mpl
-# Author: benjaminYang
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-import time
-import json
+
+
 # 设置显示中文字体
 mpl.rcParams["font.sans-serif"] = ["SimHei"]
 warnings.filterwarnings('ignore')  # 忽略所有警告
 
-  
 ##政策analysis输出的excel
-excel_file = "D:/实习/测试结果/工作流/洞察表1分段.xlsx"
+excel_file = "D:/实习/测试结果/深度洞察.xlsx"
 df1 = pd.read_excel(excel_file)
 ##政策judgement输出的excel
-excel_file = "D:/实习/测试结果/工作流/洞察表2有政策分段.xlsx"
+excel_file = "D:/实习/测试结果/分级政策结果.xlsx"
 df2 = pd.read_excel(excel_file)
-  
-result = pd.merge(df1, df2.drop(columns=['上传时间', '总结','链接','公众号','内容']), on='标题', how='left')
+
+result = pd.merge(df1, df2.drop(columns=['上传时间', '总结', '链接', '公众号', '内容']), on='标题', how='left')
 
 result['国家级政策具体政策'] = result['国家级政策具体政策'].str.replace('[', '').str.replace(']', '')
 result['省市级政策具体政策'] = result['省市级政策具体政策'].str.replace('[', '').str.replace(']', '')
 result['国家级政策具体政策'] = result['国家级政策具体政策'].astype(str)
 result['省市级政策具体政策'] = result['省市级政策具体政策'].astype(str)
+
 
 def replace_and_remove_duplicates(df, column):
     def process_string(s):
@@ -68,7 +34,7 @@ def replace_and_remove_duplicates(df, column):
                 unique_parts.append(part)
         # 使用逗号连接独特的部分
         return ','.join(unique_parts)
-    
+
     # 应用处理函数到指定列
     df[column] = df[column].apply(process_string)
     return df
@@ -84,6 +50,7 @@ def expand_keywords(df, column_to_split):
             rows.append(new_row)
     return pd.DataFrame(rows)
 
+
 # 执行关键词扩展
 expanded_df1 = expand_keywords(result, '国家级政策具体政策')
 # 再对 'col2' 列进行拆分和扩展
@@ -97,24 +64,27 @@ def deduplicate_and_merge(df, cols_to_check, cols_to_merge):
     # 将需要合并的列转换为字符串类型以避免类型错误
     for col in cols_to_merge:
         df[col] = df[col].astype(str)
-    
+
     # 按照指定的列进行去重，并将重复行的特定列元素合并成一个字符串（用逗号分隔）
     df_merged = df.groupby(cols_to_check, as_index=False).agg({col: lambda x: ','.join(x) for col in cols_to_merge})
-    
+
     return df_merged
+
 
 # 执行去重并合并
 cols_to_check = ['国家级政策具体政策', '省市级政策具体政策']
-cols_to_merge = ['目标行业', '已有产品','省市']
+cols_to_merge = ['目标行业', '已有产品', '省市']
 merged_df = deduplicate_and_merge(expanded_df2, cols_to_check, cols_to_merge)
 
 # 处理一些杂项
-merged_df['目标行业'] = merged_df['目标行业'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
-merged_df['已有产品'] = merged_df['已有产品'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n', ' ')
+merged_df['目标行业'] = merged_df['目标行业'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n',
+                                                                                                                 ' ')
+merged_df['已有产品'] = merged_df['已有产品'].str.replace('（', '').str.replace('）', '').str.replace('#', '').str.replace('\n',
+                                                                                                                 ' ')
 
 merged_df.to_excel('D:/实习/测试结果/工作流/政策表1.xlsx')
 
-df=merged_df
+df = merged_df
 # 执行处理
 df = replace_and_remove_duplicates(df, '目标行业')
 df = replace_and_remove_duplicates(df, '已有产品')
